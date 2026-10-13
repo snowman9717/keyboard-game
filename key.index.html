@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>鍵盤音程練習：全音與半音</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Noto+Sans+TC:wght@400;600;800&display=swap');
+        
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden; /* 防止滾動，完美適合 iPad 一頁呈現 */
+            font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #020617;
+        }
+
+        /* 滿版 16:9 水平垂直居中容器 */
+        .app-viewport {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            box-sizing: border-box;
+        }
+
+        .aspect-ratio-box {
+            width: 100%;
+            max-width: 1280px;
+            height: 100%;
+            max-height: 720px;
+            aspect-ratio: 16 / 9;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-sizing: border-box;
+        }
+
+        /* 鋼琴鍵盤樣式 */
+        .piano-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            height: 180px;
+            padding: 5px 0;
+            width: 100%;
+        }
+
+        .white-key {
+            flex: 1;
+            height: 165px;
+            background: linear-gradient(to bottom, #ffffff 0%, #f1f5f9 100%);
+            border: 1px solid #cbd5e1;
+            border-radius: 0 0 8px 8px;
+            box-shadow: inset 0 -5px 0 #cbd5e1, 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            z-index: 1;
+            cursor: pointer;
+            transition: all 0.05s ease;
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 8px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            color: #334155;
+        }
+
+        .white-key:active, .white-key.active {
+            background: linear-gradient(to bottom, #e2e8f0 0%, #cbd5e1 100%);
+            box-shadow: inset 0 -2px 0 #94a3b8, 0 2px 3px -1px rgba(0, 0, 0, 0.3);
+            transform: translateY(3px);
+            color: #0284c7;
+        }
+
+        .black-key {
+            width: 3.2%;
+            height: 105px;
+            background: linear-gradient(to bottom, #334155 0%, #0f172a 100%);
+            border: 1px solid #020617;
+            border-radius: 0 0 5px 5px;
+            box-shadow: inset 0 -3px 0 #020617, 2px 4px 8px rgba(0,0,0,0.5);
+            z-index: 2;
+            cursor: pointer;
+            margin-left: -1.6%;
+            margin-right: -1.6%;
+            transition: all 0.05s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding-bottom: 6px;
+            font-size: 0.65rem;
+            line-height: 1.1;
+            color: #38bdf8;
+        }
+
+        .black-key:active, .black-key.active {
+            background: linear-gradient(to bottom, #1e293b 0%, #020617 100%);
+            box-shadow: inset 0 -1px 0 #020617, 1px 2px 4px rgba(0,0,0,0.5);
+            transform: translateY(2px);
+            color: #38bdf8;
+        }
+
+        /* 僅裝飾用的右上方半個黑鍵 */
+        .dummy-black-key {
+            width: 1.6%;
+            height: 105px;
+            background: linear-gradient(to bottom, #334155 0%, #0f172a 100%);
+            border: 1px solid #020617;
+            border-radius: 0 0 0 5px;
+            box-shadow: inset 0 -3px 0 #020617, 2px 4px 8px rgba(0,0,0,0.5);
+            z-index: 2;
+            pointer-events: none; /* 無互動 */
+            margin-left: -1.6%;
+            position: relative;
+            opacity: 0.9;
+        }
+
+        /* 拉霸滾輪視覺效果 */
+        .slot-window {
+            height: 76px;
+            overflow: hidden;
+            position: relative;
+            background: #0f172a;
+            border-radius: 12px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 0 0 2px #334155;
+        }
+
+        .slot-strip {
+            transition: transform 0.1s linear;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .slot-item {
+            height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            font-weight: 800;
+        }
+
+        /* 閃爍動畫 */
+        @keyframes pulse-gold {
+            0%, 100% { box-shadow: 0 0 15px rgba(234, 179, 8, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(234, 179, 8, 0.9); }
+        }
+
+        .gold-glow {
+            animation: pulse-gold 1.5s infinite;
+        }
+
+        sup {
+            font-size: 0.65em;
+            vertical-align: super;
+            line-height: 0;
+        }
+    </style>
+</head>
+<body class="text-slate-100">
+
+    <div class="app-viewport">
+        <div class="aspect-ratio-box bg-slate-950 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl">
+
+            <!-- 1. 頁首標題與數據區 -->
+            <header class="w-full flex justify-between items-center bg-slate-900/80 border border-slate-800 px-5 py-3 rounded-2xl shadow-md">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-xl shadow-lg shadow-indigo-500/30">
+                        <i class="fa-solid fa-music"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg sm:text-xl font-extrabold tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-sky-400 to-emerald-400">
+                            鍵盤音程練習：全音與半音
+                        </h1>
+                        <p class="text-xs text-slate-400">全全半全全全半老師你在念經喔?</p>
+                    </div>
+                </div>
+
+                <!-- 遊戲數據分數 -->
+                <div class="flex items-center gap-3 text-center">
+                    <div class="bg-slate-950/60 border border-slate-800 px-3 py-1.5 rounded-xl">
+                        <div class="text-[10px] text-slate-400 uppercase font-semibold">Score</div>
+                        <div id="score-display" class="text-lg font-bold text-amber-400">0</div>
+                    </div>
+                    <div class="bg-slate-950/60 border border-slate-800 px-3 py-1.5 rounded-xl">
+                        <div class="text-[10px] text-slate-400 uppercase font-semibold">Combo</div>
+                        <div id="combo-display" class="text-lg font-bold text-sky-400">0</div>
+                    </div>
+                    <button id="btn-toggle-labels" class="bg-indigo-600 text-white px-3 py-2 rounded-xl border border-indigo-500 text-xs flex items-center gap-1.5 transition hover:bg-indigo-500 shadow-md">
+                        <i class="fa-solid fa-tag"></i>
+                        <span>顯示音名</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- 2. 拉霸機核心卡片區 -->
+            <div class="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl relative overflow-hidden my-auto">
+                <!-- 拉霸機 4 格顯示窗口 -->
+                <div class="grid grid-cols-4 gap-3 mb-3">
+                    <!-- 第 1 格：根音 -->
+                    <div class="flex flex-col items-center">
+                        <span class="text-xs font-semibold text-slate-400 mb-1">第 1 音</span>
+                        <div class="slot-window w-full">
+                            <div id="slot-0" class="slot-strip text-amber-400">
+                                <div class="slot-item">?</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 第 2 格：音程 1 -->
+                    <div class="flex flex-col items-center">
+                        <span class="text-xs font-semibold text-slate-400 mb-1">第 2 音</span>
+                        <div class="slot-window w-full">
+                            <div id="slot-1" class="slot-strip text-sky-400">
+                                <div class="slot-item">?</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 第 3 格：音程 2 -->
+                    <div class="flex flex-col items-center">
+                        <span class="text-xs font-semibold text-slate-400 mb-1">第 3 音</span>
+                        <div class="slot-window w-full">
+                            <div id="slot-2" class="slot-strip text-sky-400">
+                                <div class="slot-item">?</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 第 4 格：音程 3 -->
+                    <div class="flex flex-col items-center">
+                        <span class="text-xs font-semibold text-slate-400 mb-1">第 4 音</span>
+                        <div class="slot-window w-full">
+                            <div id="slot-3" class="slot-strip text-sky-400">
+                                <div class="slot-item">?</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 控制按鈕區與狀態 -->
+                <div class="flex items-center justify-between gap-3 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <!-- SPIN 按鈕 -->
+                        <button id="btn-spin" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-base px-6 py-2.5 rounded-xl shadow-lg shadow-orange-500/20 active:scale-95 transition flex items-center gap-2">
+                            <i class="fa-solid fa-rotate text-lg"></i>
+                            <span>點我出題</span>
+                        </button>
+                        <!-- 聽題目按鈕 -->
+                        <button id="btn-listen" disabled class="opacity-50 cursor-not-allowed bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-2 shadow-lg shadow-indigo-600/20 text-sm">
+                            <i class="fa-solid fa-volume-high"></i>
+                            <span>點我聽聽看</span>
+                        </button>
+                    </div>
+
+                    <!-- 題目狀態文字 -->
+                    <div id="target-summary" class="text-xs sm:text-sm font-medium text-slate-300 text-right">
+                        點擊「點我出題」產生新題目！
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 玩家答題進度條與狀態 -->
+            <div class="w-full bg-slate-900/60 border border-slate-800/80 rounded-xl p-2.5 flex items-center justify-between gap-3 mb-auto">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-400">彈奏進度：</span>
+                    <div id="input-progress" class="flex gap-1.5">
+                        <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-500">-</div>
+                        <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-500">-</div>
+                        <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-500">-</div>
+                        <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-500">-</div>
+                    </div>
+                </div>
+
+                <!-- 反饋提示區 -->
+                <div id="feedback-message" class="text-xs sm:text-sm font-bold text-slate-400 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info"></i> 請先轉動拉霸機
+                </div>
+
+                <button id="btn-reset-input" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg border border-slate-700 transition">
+                    <i class="fa-solid fa-arrow-rotate-left mr-1"></i> 清除重新輸入
+                </button>
+            </div>
+
+            <!-- 4. 鋼琴鍵盤容器區 -->
+            <div class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-2xl flex flex-col items-center">
+                <div id="piano" class="piano-container">
+                    <!-- 鋼琴琴鍵將由 JS 動態建立生成 -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 音符數據與同音異名標籤設定
+        // ==========================================
+        
+        // 12 度範圍音符清單 (C4 到 G5)
+        const NOTES = [
+            { name: "C4",  labelHTML: "C4",          type: "white", freq: 261.63 },
+            { name: "C#4", labelHTML: "C<sup>♯</sup>4<br>D<sup>♭</sup>4", type: "black", freq: 277.18 },
+            { name: "D4",  labelHTML: "D4",          type: "white", freq: 293.66 },
+            { name: "D#4", labelHTML: "D<sup>♯</sup>4<br>E<sup>♭</sup>4", type: "black", freq: 311.13 },
+            { name: "E4",  labelHTML: "E4",          type: "white", freq: 329.63 },
+            { name: "F4",  labelHTML: "F4",          type: "white", freq: 349.23 },
+            { name: "F#4", labelHTML: "F<sup>♯</sup>4<br>G<sup>♭</sup>4", type: "black", freq: 369.99 },
+            { name: "G4",  labelHTML: "G4",          type: "white", freq: 392.00 },
+            { name: "G#4", labelHTML: "G<sup>♯</sup>4<br>A<sup>♭</sup>4", type: "black", freq: 415.30 },
+            { name: "A4",  labelHTML: "A4",          type: "white", freq: 440.00 },
+            { name: "A#4", labelHTML: "A<sup>♯</sup>4<br>B<sup>♭</sup>4", type: "black", freq: 466.16 },
+            { name: "B4",  labelHTML: "B4",          type: "white", freq: 493.88 },
+            { name: "C5",  labelHTML: "C5",          type: "white", freq: 523.25 },
+            { name: "C#5", labelHTML: "C<sup>♯</sup>5<br>D<sup>♭</sup>5", type: "black", freq: 554.37 },
+            { name: "D5",  labelHTML: "D5",          type: "white", freq: 587.33 },
+            { name: "D#5", labelHTML: "D<sup>♯</sup>5<br>E<sup>♭</sup>5", type: "black", freq: 622.25 },
+            { name: "E5",  labelHTML: "E5",          type: "white", freq: 659.25 },
+            { name: "F5",  labelHTML: "F5",          type: "white", freq: 698.46 },
+            { name: "F#5", labelHTML: "F<sup>♯</sup>5<br>G<sup>♭</sup>5", type: "black", freq: 739.99 },
+            { name: "G5",  labelHTML: "G5",          type: "white", freq: 783.99 }
+        ];
+
+        const ROOT_NOTES = ["C", "D", "E", "F", "G", "A", "B"];
+        const INTERVAL_TYPES = ["全", "半"];
+
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        // Web Audio API 發聲
+        function playTone(freq, duration = 1.2) {
+            try {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+
+                const osc = ctx.createOscillator();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now);
+
+                const osc2 = ctx.createOscillator();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(freq * 2, now);
+
+                const gainNode = ctx.createGain();
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(0.6, now + 0.02);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                const filter = ctx.createBiquadFilter();
+                filter.type = "lowpass";
+                filter.frequency.setValueAtTime(freq * 3, now);
+
+                osc.connect(gainNode);
+                osc2.connect(gainNode);
+                gainNode.connect(filter);
+                filter.connect(ctx.destination);
+
+                osc.start(now);
+                osc2.start(now);
+                osc.stop(now + duration);
+                osc2.stop(now + duration);
+            } catch (e) {
+                console.error("Audio Error:", e);
+            }
+        }
+
+        function playVictorySound() {
+            const notes = [523.25, 659.25, 783.99, 1046.50];
+            notes.forEach((freq, idx) => {
+                setTimeout(() => playTone(freq, 0.6), idx * 120);
+            });
+        }
+
+        function playErrorSound() {
+            try {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.linearRampToValueAtTime(110, now + 0.3);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } catch(e) {}
+        }
+
+        let currentTargetSequence = [];
+        let userSequence = [];
+        let isSpinning = false;
+        let showKeyLabels = true;
+        let score = 0;
+        let combo = 0;
+
+        const pianoContainer = document.getElementById("piano");
+        const btnSpin = document.getElementById("btn-spin");
+        const btnListen = document.getElementById("btn-listen");
+        const btnResetInput = document.getElementById("btn-reset-input");
+        const btnToggleLabels = document.getElementById("btn-toggle-labels");
+        const targetSummary = document.getElementById("target-summary");
+        const feedbackMessage = document.getElementById("feedback-message");
+        const scoreDisplay = document.getElementById("score-display");
+        const comboDisplay = document.getElementById("combo-display");
+
+        // 建立鋼琴鍵盤
+        function renderPiano() {
+            pianoContainer.innerHTML = "";
+            NOTES.forEach((note, index) => {
+                const keyEl = document.createElement("div");
+                keyEl.dataset.index = index;
+                keyEl.dataset.name = note.name;
+
+                if (note.type === "white") {
+                    keyEl.className = "white-key";
+                } else {
+                    keyEl.className = "black-key";
+                }
+
+                const labelSpan = document.createElement("span");
+                labelSpan.className = "key-label transition-opacity text-center";
+                labelSpan.innerHTML = note.labelHTML;
+                labelSpan.style.opacity = showKeyLabels ? "1" : "0";
+                keyEl.appendChild(labelSpan);
+
+                const handleKeyPress = (e) => {
+                    e.preventDefault();
+                    onKeyTriggered(index);
+                };
+
+                keyEl.addEventListener("mousedown", handleKeyPress);
+                keyEl.addEventListener("touchstart", handleKeyPress, { passive: false });
+
+                pianoContainer.appendChild(keyEl);
+            });
+
+            // 在最右側 G5 白鍵右上方補上「半個裝飾黑鍵」
+            const dummyKey = document.createElement("div");
+            dummyKey.className = "dummy-black-key";
+            pianoContainer.appendChild(dummyKey);
+        }
+
+        function onKeyTriggered(index) {
+            const note = NOTES[index];
+            playTone(note.freq);
+
+            const keyEls = pianoContainer.querySelectorAll(".white-key, .black-key");
+            if (keyEls[index]) {
+                keyEls[index].classList.add("active");
+                setTimeout(() => keyEls[index].classList.remove("active"), 200);
+            }
+
+            if (currentTargetSequence.length === 4 && userSequence.length < 4 && !isSpinning) {
+                userSequence.push(note);
+                updateProgressDisplay();
+
+                if (userSequence.length === 4) {
+                    checkAnswer();
+                }
+            }
+        }
+
+        // 拉霸出題
+        function spinSlotMachine() {
+            if (isSpinning) return;
+            getAudioContext();
+
+            isSpinning = true;
+            userSequence = [];
+            updateProgressDisplay();
+            btnListen.disabled = true;
+            btnListen.classList.add("opacity-50", "cursor-not-allowed");
+            feedbackMessage.className = "text-xs sm:text-sm font-bold text-sky-400 flex items-center gap-2";
+            feedbackMessage.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 出題中，請稍候...`;
+
+            const rootLetter = ROOT_NOTES[Math.floor(Math.random() * ROOT_NOTES.length)];
+            const rootNoteIndex = NOTES.findIndex(n => n.name === (rootLetter + "4"));
+
+            const interval1 = INTERVAL_TYPES[Math.floor(Math.random() * INTERVAL_TYPES.length)];
+            const interval2 = INTERVAL_TYPES[Math.floor(Math.random() * INTERVAL_TYPES.length)];
+            const interval3 = INTERVAL_TYPES[Math.floor(Math.random() * INTERVAL_TYPES.length)];
+
+            let idx0 = rootNoteIndex;
+            let idx1 = idx0 + (interval1 === "全" ? 2 : 1);
+            let idx2 = idx1 + (interval2 === "全" ? 2 : 1);
+            let idx3 = idx2 + (interval3 === "全" ? 2 : 1);
+
+            if (idx3 >= NOTES.length) {
+                isSpinning = false;
+                spinSlotMachine();
+                return;
+            }
+
+            currentTargetSequence = [NOTES[idx0], NOTES[idx1], NOTES[idx2], NOTES[idx3]];
+
+            const slotsData = [
+                { id: "slot-0", items: ROOT_NOTES, final: rootLetter },
+                { id: "slot-1", items: INTERVAL_TYPES, final: interval1 },
+                { id: "slot-2", items: INTERVAL_TYPES, final: interval2 },
+                { id: "slot-3", items: INTERVAL_TYPES, final: interval3 }
+            ];
+
+            slotsData.forEach((slot, colIdx) => {
+                const strip = document.getElementById(slot.id);
+                let html = "";
+                for (let i = 0; i < 15; i++) {
+                    const randomVal = slot.items[Math.floor(Math.random() * slot.items.length)];
+                    html += `<div class="slot-item">${randomVal}</div>`;
+                }
+                html += `<div class="slot-item font-black">${slot.final}</div>`;
+                strip.innerHTML = html;
+
+                strip.style.transition = "none";
+                strip.style.transform = "translateY(0px)";
+
+                setTimeout(() => {
+                    const duration = 1.0 + colIdx * 0.35;
+                    strip.style.transition = `transform ${duration}s cubic-bezier(0.15, 0.85, 0.35, 1.2)`;
+                    const totalOffset = (strip.children.length - 1) * 76;
+                    strip.style.transform = `translateY(-${totalOffset}px)`;
+                    playClickSound();
+                }, 50);
+            });
+
+            setTimeout(() => {
+                isSpinning = false;
+                btnListen.disabled = false;
+                btnListen.classList.remove("opacity-50", "cursor-not-allowed");
+
+                targetSummary.innerHTML = `題目：<span class="text-amber-400 font-bold">${rootLetter}</span> ➔ <span class="text-sky-400 font-bold">${interval1}</span> ➔ <span class="text-sky-400 font-bold">${interval2}</span> ➔ <span class="text-sky-400 font-bold">${interval3}</span>`;
+                feedbackMessage.className = "text-xs sm:text-sm font-bold text-amber-400 flex items-center gap-2";
+                feedbackMessage.innerHTML = `<i class="fa-solid fa-keyboard"></i> 請在鋼琴上依序彈奏出這 4 個音！`;
+            }, 2100);
+        }
+
+        function playClickSound() {
+            try {
+                const ctx = getAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, ctx.currentTime);
+                gain.gain.setValueAtTime(0.05, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.05);
+            } catch(e) {}
+        }
+
+        function updateProgressDisplay() {
+            const container = document.getElementById("input-progress");
+            const slots = container.children;
+
+            for (let i = 0; i < 4; i++) {
+                if (i < userSequence.length) {
+                    slots[i].textContent = userSequence[i].name;
+                    slots[i].className = "w-8 h-8 rounded-lg bg-sky-600 border border-sky-400 flex items-center justify-center text-xs font-bold text-white shadow-lg shadow-sky-500/30 transition-all scale-105";
+                } else {
+                    slots[i].textContent = "-";
+                    slots[i].className = "w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-500 transition-all";
+                }
+            }
+        }
+
+        function playTargetSequence() {
+            if (currentTargetSequence.length !== 4 || isSpinning) return;
+
+            btnListen.disabled = true;
+            const keyEls = pianoContainer.querySelectorAll(".white-key, .black-key");
+
+            currentTargetSequence.forEach((note, idx) => {
+                setTimeout(() => {
+                    playTone(note.freq, 0.8);
+                    const noteIdx = NOTES.findIndex(n => n.name === note.name);
+                    if (noteIdx !== -1 && keyEls[noteIdx]) {
+                        keyEls[noteIdx].classList.add("active");
+                        setTimeout(() => keyEls[noteIdx].classList.remove("active"), 350);
+                    }
+                    if (idx === 3) {
+                        setTimeout(() => btnListen.disabled = false, 500);
+                    }
+                }, idx * 500);
+            });
+        }
+
+        function checkAnswer() {
+            let isCorrect = true;
+
+            for (let i = 0; i < 4; i++) {
+                if (userSequence[i].name !== currentTargetSequence[i].name) {
+                    isCorrect = false;
+                    break;
+                }
+            }
+
+            if (isCorrect) {
+                playVictorySound();
+                combo++;
+                score += 100 + (combo - 1) * 20;
+
+                scoreDisplay.textContent = score;
+                comboDisplay.textContent = combo;
+
+                feedbackMessage.className = "text-xs sm:text-sm font-bold text-emerald-400 flex items-center gap-2 animate-bounce";
+                feedbackMessage.innerHTML = `<i class="fa-solid fa-circle-check"></i> 完全正確！🎉 太棒了！(+${100 + (combo - 1) * 20}分)`;
+
+                document.querySelectorAll('.slot-window').forEach(el => el.classList.add('gold-glow'));
+                setTimeout(() => {
+                    document.querySelectorAll('.slot-window').forEach(el => el.classList.remove('gold-glow'));
+                }, 2000);
+
+            } else {
+                playErrorSound();
+                combo = 0;
+                comboDisplay.textContent = combo;
+
+                feedbackMessage.className = "text-xs sm:text-sm font-bold text-rose-400 flex items-center gap-2";
+                feedbackMessage.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> 彈錯囉！❌ 請再試一次！`;
+
+                setTimeout(() => {
+                    userSequence = [];
+                    updateProgressDisplay();
+                }, 1200);
+            }
+        }
+
+        btnSpin.addEventListener("click", spinSlotMachine);
+        btnListen.addEventListener("click", playTargetSequence);
+
+        btnResetInput.addEventListener("click", () => {
+            userSequence = [];
+            updateProgressDisplay();
+            feedbackMessage.className = "text-xs sm:text-sm font-bold text-slate-400 flex items-center gap-2";
+            feedbackMessage.innerHTML = `<i class="fa-solid fa-rotate-left"></i> 已清除輸入，請重新彈奏。`;
+        });
+
+        btnToggleLabels.addEventListener("click", () => {
+            showKeyLabels = !showKeyLabels;
+            const labels = document.querySelectorAll(".key-label");
+            labels.forEach(l => l.style.opacity = showKeyLabels ? "1" : "0");
+            btnToggleLabels.classList.toggle("bg-indigo-600");
+            btnToggleLabels.classList.toggle("bg-slate-800");
+        });
+
+        window.addEventListener("load", () => {
+            renderPiano();
+        });
+    </script>
+</body>
+</html>
